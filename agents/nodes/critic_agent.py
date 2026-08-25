@@ -10,24 +10,33 @@ llm = ChatGroq(
     groq_api_key=settings.groq_api_key,
 )
 
-
 def critic_node(state: AgentState) -> dict:
-    full_doc_content = "\n".join(
-        [doc.page_content for doc in state.get("retrieved_docs", [])]
-    )
-    doc_context = full_doc_content[:3000]
+    evidence_parts = []
+    all_docs = []
+
+    if state.get("retrieved_docs"):
+        all_docs.extend(state["retrieved_docs"])
+    if state.get("web_results"):
+        all_docs.extend(state["web_results"])
+
+    for doc in all_docs:
+        src = doc.metadata.get("source", "unknown")
+        page = doc.metadata.get("page", 0)
+        evidence_parts.append(f"Source: {src}, Page: {page}\nContent: {doc.page_content}")
+
+    full_evidence = "\n".join(evidence_parts) if evidence_parts else "No evidence available."
 
     prompt = f"""
-You are a strict QA Auditor. Your job is to verify the Analyst's response against the provided Document Sources.
+You are a strict QA Auditor. Your job is to verify the Analyst's response against the provided Evidence.
 
---- DOCUMENT SOURCES (TRUNCATED) ---
-{doc_context}
+--- ALL EVIDENCE (DOCUMENTS + WEB) ---
+{full_evidence}
 
 --- ANALYST RESPONSE TO AUDIT ---
 {state["analysis"]}
 
 --- INSTRUCTIONS ---
-1. Identify any claims in the Analyst Response that are not supported by the Document Sources.
+1. Identify any claims in the Analyst Response that are not supported by the Evidence.
 2. Identify any logical gaps in the reasoning.
 3. Identify any missing critical information.
 4. Provide a confidence rating as X/10 and a final VERDICT: APPROVE or REVISE.

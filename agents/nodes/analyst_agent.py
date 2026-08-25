@@ -10,20 +10,22 @@ llm = ChatGoogleGenerativeAI(
     google_api_key=settings.google_api_key,
 )
 
-
 def analyst_node(state: AgentState) -> dict:
     context_parts = []
+    all_docs = []
 
     if state.get("retrieved_docs"):
-        context_parts.append("--- DOCUMENT SOURCES ---")
-        for doc in state["retrieved_docs"]:
+        all_docs.extend(state["retrieved_docs"])
+    
+    if state.get("web_results"):
+        all_docs.extend(state["web_results"])
+
+    if all_docs:
+        context_parts.append("--- CONTEXT SOURCES ---")
+        for doc in all_docs:
             src = doc.metadata.get("source", "unknown")
             page = doc.metadata.get("page", 0)
             context_parts.append(f"Source: {src}, Page: {page}\nContent: {doc.page_content}")
-
-    if state.get("web_results"):
-        context_parts.append("\n--- WEB SOURCES ---")
-        context_parts.extend(state["web_results"])
 
     full_context = "\n".join(context_parts) if context_parts else "No context available."
 

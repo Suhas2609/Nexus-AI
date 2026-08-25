@@ -9,7 +9,7 @@ class AgentState(TypedDict):
     
     # 2. Research Data
     retrieved_docs: List[Document]
-    web_results: List[str]
+    web_results: List[Document]
     
     # 3. Agent Drafts & Feedback
     analysis: str

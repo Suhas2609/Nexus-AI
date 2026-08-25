@@ -1,6 +1,6 @@
 from langgraph.graph import StateGraph, START, END
 from agents.state import AgentState
-from agents.nodes.orchestrator import orchestrator_node
+from agents.nodes.orchestrator import orchestrator_node, route_web_search
 from agents.nodes.retriever_agent import retriever_node
 from agents.nodes.web_search_agent import web_search_node
 from agents.nodes.analyst_agent import analyst_node
@@ -23,7 +23,7 @@ workflow.set_entry_point("orchestrator")
 
 # Parallel extraction split
 workflow.add_edge("orchestrator", "retriever")
-workflow.add_edge("orchestrator", "web_search")
+workflow.add_conditional_edges("orchestrator", route_web_search, {"web_search": "web_search", "analyst": "analyst"})
 
 # Converge into Analyst
 workflow.add_edge("retriever", "analyst")

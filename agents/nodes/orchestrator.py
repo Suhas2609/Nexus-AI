@@ -21,5 +21,7 @@ def orchestrator_node(state: AgentState) -> dict:
     }
 
 
-def route_after_orchestrator(state: AgentState) -> str:
-    return "retriever"
+def route_web_search(state: AgentState) -> str:
+    if state.get("needs_web_search"):
+        return "web_search"
+    return "analyst"

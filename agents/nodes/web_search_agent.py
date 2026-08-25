@@ -1,5 +1,6 @@
 from agents.state import AgentState
 from langchain_community.tools import DuckDuckGoSearchRun
+from langchain_core.documents import Document
 
 search_tool = DuckDuckGoSearchRun()
 
@@ -17,7 +18,12 @@ def web_search_node(state: AgentState) -> dict:
         if not raw_result or "No good search results" in raw_result:
             raise ValueError("Empty or invalid search response")
 
-        web_results = [raw_result]
+        web_results = [
+            Document(
+                page_content=raw_result,
+                metadata={"source": "web_search", "page": 0, "query": query}
+            )
+        ]
         trace_msg = f"[Web Search] Success: Fetched live data for '{query[:30]}...'"
 
 

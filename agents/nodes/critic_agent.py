@@ -51,13 +51,14 @@ VERDICT: [APPROVE or REVISE]
     response = llm.invoke([HumanMessage(content=prompt)])
     critique_text = response.content
 
-    confidence = 10
+    # Confidence is diagnostic/trace-only. VERDICT drives actual control flow.
+    confidence = 0
     try:
         conf_line = [line for line in critique_text.split("\n") if "CONFIDENCE:" in line][0]
         confidence_str = conf_line.split(":")[1].strip().split("/")[0]
         confidence = int(confidence_str)
     except Exception:
-        confidence = 10
+        confidence = 0
 
     verdict = "APPROVE" if "VERDICT: APPROVE" in critique_text else "REVISE"
 

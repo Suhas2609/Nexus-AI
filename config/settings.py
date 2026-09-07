@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     chroma_collection_name: str = "nexus_collection"
 
     # Model Names
-    analyst_model: str = "gemini-1.5-flash"
-    critic_model: str = "llama-3.1-70b-versatile"
+    analyst_model: str = "gemini-3.1-flash-lite"
+    critic_model: str = "qwen/qwen3.6-27b"
     embedding_model: str = "gemini-embedding-001"
 
     # RAG Numeric Parameters

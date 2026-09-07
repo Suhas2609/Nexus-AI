@@ -1,0 +1,16 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install uv directly
+RUN pip install uv
+
+COPY requirements.txt .
+
+# Execute uv system-wide installation
+RUN uv pip install --system --no-cache -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -49,3 +49,30 @@ def test_route_after_critic_revise_at_limit():
 def test_route_after_critic_revise_within_limit():
     state = make_state(critique="VERDICT: REVISE", revision_count=1)
     assert route_after_critic(state) == "analyst"
+
+
+from agents.utils import extract_text_from_content
+
+def test_extract_text_from_content_string_input():
+    raw_input = "This is a direct string response."
+    result = extract_text_from_content(raw_input)
+    assert result == "This is a direct string response."
+
+
+def test_extract_text_from_content_list_of_text_blocks():
+    raw_input = [
+        {"type": "text", "text": "First part of the analysis."},
+        {"type": "text", "text": "Second part of the analysis."}
+    ]
+    result = extract_text_from_content(raw_input)
+    assert result == "First part of the analysis.\nSecond part of the analysis."
+
+
+def test_extract_text_from_content_mixed_list():
+    raw_input = [
+        "First plain string block",
+        {"type": "text", "text": "Second dict block"}
+    ]
+    result = extract_text_from_content(raw_input)
+    assert result == "First plain string block\nSecond dict block"
+

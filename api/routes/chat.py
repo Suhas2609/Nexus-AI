@@ -12,6 +12,7 @@ from api.session.manager import get_or_create_session, get_chat_history
 from rag.chain.rag_chain import run_rag_chain, get_rag_chain
 
 # --- Phase 3: Multi-Agent Graph ---
+from agents.utils import extract_text_from_content
 from agents.graph import get_agent_graph, build_initial_state
 
 logger = logging.getLogger(__name__)
@@ -35,7 +36,7 @@ async def chat_endpoint(request: ChatRequest):
         if not request.use_agent:
             # --- Simple RAG Execution ---
             results = await run_rag_chain(request.query, chat_history)
-            final_answer = results.get("answer", "")
+            final_answer = extract_text_from_content(results.get("answer", ""))
             raw_sources = results.get("sources", [])
             agent_trace = None
         else:
@@ -44,7 +45,8 @@ async def chat_endpoint(request: ChatRequest):
             agent_graph = get_agent_graph()
             graph_result = await agent_graph.ainvoke(initial_state)
             
-            final_answer = graph_result.get("final_answer", "Graph execution failed to generate an answer.")
+            raw_answer = graph_result.get("final_answer", "Graph execution failed to generate an answer.")
+            final_answer = extract_text_from_content(raw_answer)
             raw_sources = graph_result.get("retrieved_docs", [])
             agent_trace = graph_result.get("agent_trace", [])
 

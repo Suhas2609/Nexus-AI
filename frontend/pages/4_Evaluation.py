@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-import pandas as pd
+from components.metrics_chart import render_historical_chart
 
 from config.settings import settings
 
@@ -55,14 +55,4 @@ if latest:
 # Phase 5: Historical Data Charting
 if history:
     st.subheader("Historical Performance")
-    df = pd.DataFrame(history)
-    
-    if "timestamp" in df.columns:
-        df["timestamp"] = pd.to_datetime(df["timestamp"])
-        df.set_index("timestamp", inplace=True)
-        
-    metrics_cols = [col for col in ["faithfulness", "answer_relevancy", "context_precision", "context_recall"] if col in df.columns]
-    
-    if metrics_cols:
-        metrics_df = df[metrics_cols] * 100
-        st.line_chart(metrics_df)  
+    render_historical_chart(history)

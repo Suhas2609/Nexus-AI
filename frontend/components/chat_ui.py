@@ -1,4 +1,5 @@
 import streamlit as st
+from components.citation_card import render_sources
 
 def render_chat_history(messages: list[dict]):
     for msg in messages:
@@ -6,10 +7,9 @@ def render_chat_history(messages: list[dict]):
             st.markdown(msg["content"])
             
             if "sources" in msg and msg["sources"]:
-                with st.expander("📚 View Sources"):
-                    for source in msg["sources"]:
-                        st.markdown(f"- {source.get('source', 'Unknown')} (Page {source.get('page', 'Unknown')})")
+                with st.expander("View Sources"):
+                    render_sources(msg["sources"])
             
             if "agent_trace" in msg and msg["agent_trace"] is not None:
-                with st.expander("🧠 View Agent Reasoning Trace"):
+                with st.expander("View Agent Reasoning Trace"):
                     st.text(msg["agent_trace"])

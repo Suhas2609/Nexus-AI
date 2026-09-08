@@ -2,6 +2,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 
 from agents.state import AgentState
+from agents.utils import extract_text_from_content
 from config.settings import settings
 
 llm = ChatGoogleGenerativeAI(
@@ -49,9 +50,10 @@ def analyst_node(state: AgentState) -> dict:
 User Question: {state['question']}"""
 
     response = llm.invoke([HumanMessage(content=prompt)])
+    analysis_text = extract_text_from_content(response.content)
 
-    trace_msg = f"[Analyst] Synthesis complete ({trace_note}). Output length: {len(response.content)} chars."
-    payload["analysis"] = response.content
+    trace_msg = f"[Analyst] Synthesis complete ({trace_note}). Output length: {len(analysis_text)} chars."
+    payload["analysis"] = analysis_text
     payload["agent_trace"] = [trace_msg]
 
     return payload

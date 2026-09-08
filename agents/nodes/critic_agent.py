@@ -1,4 +1,5 @@
 from agents.state import AgentState
+from agents.utils import extract_text_from_content
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
 
@@ -8,6 +9,7 @@ llm = ChatGroq(
     model=settings.critic_model,
     temperature=0.1,
     groq_api_key=settings.groq_api_key,
+    max_tokens=800,
 )
 
 def critic_node(state: AgentState) -> dict:
@@ -49,7 +51,7 @@ VERDICT: [APPROVE or REVISE]
 """
 
     response = llm.invoke([HumanMessage(content=prompt)])
-    critique_text = response.content
+    critique_text = extract_text_from_content(response.content)
 
     # Confidence is diagnostic/trace-only. VERDICT drives actual control flow.
     confidence = 0

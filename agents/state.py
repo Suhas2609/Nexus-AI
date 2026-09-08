@@ -1,4 +1,6 @@
-from typing import TypedDict, List
+import operator
+from typing import Annotated, List, TypedDict
+
 from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage
 
@@ -22,4 +24,4 @@ class AgentState(TypedDict):
     # 5. Final Output & Logging
     final_answer: str
     sources: List[dict]
-    agent_trace: List[str]
+    agent_trace: Annotated[List[str], operator.add]

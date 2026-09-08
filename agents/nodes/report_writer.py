@@ -1,4 +1,5 @@
 from agents.state import AgentState
+from agents.utils import extract_text_from_content
 from rag.chain.rag_chain import format_sources
 
 def report_writer_node(state: AgentState) -> dict:
@@ -9,7 +10,8 @@ def report_writer_node(state: AgentState) -> dict:
     
     # Phase 2: State Extraction
     # Use the latest analyst response
-    final_text = state.get("analysis", "No analysis content was generated.")
+    raw_analysis = state.get("analysis", "No analysis content was generated.")
+    final_text = extract_text_from_content(raw_analysis)
     
     all_docs = state.get("retrieved_docs", []) + state.get("web_results", [])
     final_sources = format_sources(all_docs)

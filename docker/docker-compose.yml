@@ -33,6 +33,9 @@ services:
     ports:
       - "5678:5678"
     environment:
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL}
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=admin
       - N8N_BASIC_AUTH_PASSWORD=${n8n_password}

@@ -135,7 +135,7 @@ async def test_documents_endpoint_handles_empty_vector_store():
     # Simulate an empty Chroma collection state payload layout
     mock_store.get.return_value = {"ids": [], "metadatas": []}
     
-    with patch.dict(app.state.__dict__, {"chroma_store": mock_store}, clear=False):
+    with patch("api.routes.documents.get_or_create_store", return_value=mock_store):
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
             response = await ac.get("/api/v1/documents")
             
@@ -143,3 +143,29 @@ async def test_documents_endpoint_handles_empty_vector_store():
     json_data = response.json()
     assert json_data["documents"] == []
     assert json_data["total_chunks"] == 0
+
+
+# Phase 7: Evaluate Endpoint Async Route Integration
+@pytest.mark.asyncio
+@patch("api.routes.evaluation.run_ragas_evaluation")
+async def test_evaluate_endpoint_success(mock_eval):
+    """
+    Ensures POST /api/v1/evaluate triggers run_ragas_evaluation and returns valid metrics.
+    """
+    mock_eval.return_value = {
+        "faithfulness": 0.85,
+        "answer_relevancy": 0.90,
+        "context_precision": 0.80,
+        "context_recall": 0.88,
+        "timestamp": "2026-09-10T22:00:00Z",
+        "questions_evaluated": 13,
+    }
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.post("/api/v1/evaluate")
+
+    assert response.status_code == 200
+    json_data = response.json()
+    assert json_data["faithfulness"] == 0.85
+    assert json_data["answer_relevancy"] == 0.90
+    assert json_data["questions_evaluated"] == 13

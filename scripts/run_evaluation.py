@@ -1,3 +1,4 @@
+import asyncio
 from evaluation.ragas_eval import run_ragas_evaluation
 
 
@@ -12,7 +13,7 @@ def main() -> None:
 
     print("[INFO] Do not interrupt the process.\n")
 
-    results = run_ragas_evaluation(use_cache=True)
+    results = asyncio.run(run_ragas_evaluation(use_cache=True))
 
     print("\n--- Evaluation Metrics Summary ---\n")
 

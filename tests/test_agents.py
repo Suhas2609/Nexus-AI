@@ -76,3 +76,63 @@ def test_extract_text_from_content_mixed_list():
     result = extract_text_from_content(raw_input)
     assert result == "First plain string block\nSecond dict block"
 
+
+from agents.nodes.critic_agent import parse_critic_response
+
+def test_parse_critic_response_normal_approve():
+    raw = "ISSUES: None\nMISSING: None\nCONFIDENCE: 9/10\nVERDICT: APPROVE"
+    conf, verdict, norm = parse_critic_response(raw)
+    assert conf == 9
+    assert verdict == "APPROVE"
+    assert "VERDICT: APPROVE" in norm
+
+
+def test_parse_critic_response_normal_revise():
+    raw = "ISSUES: Fact gap\nMISSING: Context\nCONFIDENCE: 4/10\nVERDICT: REVISE"
+    conf, verdict, norm = parse_critic_response(raw)
+    assert conf == 4
+    assert verdict == "REVISE"
+    assert "VERDICT: REVISE" in norm
+
+
+def test_parse_critic_response_mixed_case():
+    raw = "issues: None\nconfidence: 8/10\nverdict: approve"
+    conf, verdict, norm = parse_critic_response(raw)
+    assert conf == 8
+    assert verdict == "APPROVE"
+
+
+def test_parse_critic_response_with_think_tag():
+    raw = "<think>\nThinking process...\nVerdict should be approve.\n</think>\nISSUES: None\nCONFIDENCE: 10/10\nVERDICT: APPROVE"
+    conf, verdict, norm = parse_critic_response(raw)
+    assert conf == 10
+    assert verdict == "APPROVE"
+    assert "<think>" not in norm
+
+
+def test_parse_critic_response_truncated_no_verdict():
+    raw = "<think>\nPartial thinking block truncated..."
+    conf, verdict, norm = parse_critic_response(raw)
+    assert conf == 0
+    assert verdict == "REVISE"
+    assert "ISSUES: Critic response incomplete or invalid." in norm
+    assert "VERDICT: REVISE" in norm
+
+
+def test_parse_critic_response_malformed_verdict():
+    raw = "CONFIDENCE: 7/10\nVERDICT: MAYBE"
+    conf, verdict, norm = parse_critic_response(raw)
+    assert conf == 7
+    assert verdict == "REVISE"
+
+
+def test_route_after_critic_missing_verdict_below_limit():
+    state = make_state(critique="Malformed text with no verdict", revision_count=0)
+    assert route_after_critic(state) == "analyst"
+
+
+def test_route_after_critic_missing_verdict_at_limit():
+    state = make_state(critique="Malformed text with no verdict", revision_count=2)
+    assert route_after_critic(state) == "report_writer"
+
+

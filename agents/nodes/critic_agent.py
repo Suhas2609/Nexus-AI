@@ -1,3 +1,4 @@
+import re
 from agents.state import AgentState
 from agents.utils import extract_text_from_content
 from langchain_groq import ChatGroq
@@ -11,6 +12,42 @@ llm = ChatGroq(
     groq_api_key=settings.groq_api_key,
     max_tokens=800,
 )
+
+def parse_critic_response(text: str) -> tuple[int, str, str]:
+    """
+    Parses the raw text response from the Critic LLM.
+    Strips any <think>...</think> blocks.
+    Uses regex to extract confidence score and verdict.
+    If missing/invalid, verdict MUST default to REVISE.
+    Returns (confidence, verdict, normalized_critique_text).
+    """
+    clean_text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+
+    # Regex for confidence score: CONFIDENCE:\s*(\d+)\s*/\s*10
+    conf_match = re.search(r"CONFIDENCE:\s*(\d+)\s*/\s*10", clean_text, re.IGNORECASE)
+    confidence = int(conf_match.group(1)) if conf_match else 0
+
+    # Regex for verdict: VERDICT:\s*(APPROVE|REVISE)
+    verdict_match = re.search(r"VERDICT:\s*(APPROVE|REVISE)", clean_text, re.IGNORECASE)
+    if verdict_match:
+        verdict = verdict_match.group(1).upper()
+    else:
+        verdict = "REVISE"
+
+    if not clean_text or not verdict_match:
+        normalized_critique = (
+            f"{clean_text}\n\n" if clean_text else ""
+        ) + (
+            "ISSUES: Critic response incomplete or invalid.\n"
+            "MISSING: Explicit verdict could not be parsed.\n"
+            "CONFIDENCE: 0/10\n"
+            "VERDICT: REVISE"
+        )
+    else:
+        normalized_critique = clean_text
+
+    return confidence, verdict, normalized_critique
+
 
 def critic_node(state: AgentState) -> dict:
     evidence_parts = []
@@ -28,8 +65,12 @@ def critic_node(state: AgentState) -> dict:
 
     full_evidence = "\n".join(evidence_parts) if evidence_parts else "No evidence available."
 
-    prompt = f"""
-You are a strict QA Auditor. Your job is to verify the Analyst's response against the provided Evidence.
+    prompt = f"""You are a strict QA auditor.
+Compare the Analyst response against the supplied evidence and the original user question.
+Be extremely concise. Do NOT evaluate claims one by one. Do NOT produce verbose reasoning.
+
+--- USER QUESTION ---
+{state['question']}
 
 --- ALL EVIDENCE (DOCUMENTS + WEB) ---
 {full_evidence}
@@ -40,32 +81,27 @@ You are a strict QA Auditor. Your job is to verify the Analyst's response agains
 --- INSTRUCTIONS ---
 1. Identify any claims in the Analyst Response that are not supported by the Evidence.
 2. Identify any logical gaps in the reasoning.
-3. Identify any missing critical information.
+3. Identify any EXPLICIT requirements in the original question that the Analyst response did not address. If the question asked for specific quantitative data, parameter counts, or numerical results, verify they appear in the response. List each unaddressed requirement under MISSING.
 4. Provide a confidence rating as X/10 and a final VERDICT: APPROVE or REVISE.
 
-You must strictly follow this output format:
-ISSUES: [List of discrepancies or none]
-MISSING: [List of missing info or none]
-CONFIDENCE: [Score]/10
-VERDICT: [APPROVE or REVISE]
+Return ONLY in this format:
+ISSUES: <brief summary of discrepancies or None>
+MISSING: <brief summary of unaddressed requirements or None>
+CONFIDENCE: <0-10>/10
+VERDICT: <APPROVE or REVISE>
+
+Keep the final response under 150 words.
+Do not include markdown code fences.
+Do not include <think> reasoning in the final answer.
 """
 
     response = llm.invoke([HumanMessage(content=prompt)])
-    critique_text = extract_text_from_content(response.content)
+    raw_text = extract_text_from_content(response.content)
 
-    # Confidence is diagnostic/trace-only. VERDICT drives actual control flow.
-    confidence = 0
-    try:
-        conf_line = [line for line in critique_text.split("\n") if "CONFIDENCE:" in line][0]
-        confidence_str = conf_line.split(":")[1].strip().split("/")[0]
-        confidence = int(confidence_str)
-    except Exception:
-        confidence = 0
-
-    verdict = "APPROVE" if "VERDICT: APPROVE" in critique_text else "REVISE"
+    confidence, verdict, normalized_critique = parse_critic_response(raw_text)
 
     return {
-        "critique": critique_text,
+        "critique": normalized_critique,
         "agent_trace": [f"[Critic] Audited response. Confidence: {confidence}/10. Verdict: {verdict}."],
     }
 
@@ -74,7 +110,10 @@ def route_after_critic(state: AgentState) -> str:
     critique = state.get("critique", "")
     revision_count = state.get("revision_count", 0)
 
-    if "VERDICT: REVISE" in critique and revision_count < 2:
+    verdict_match = re.search(r"VERDICT:\s*(APPROVE|REVISE)", critique, re.IGNORECASE)
+    verdict = verdict_match.group(1).upper() if verdict_match else "REVISE"
+
+    if verdict == "REVISE" and revision_count < 2:
         return "analyst"
 
     return "report_writer"

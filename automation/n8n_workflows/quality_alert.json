@@ -1,0 +1,159 @@
+{
+  "name": "quality_alert",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "de2197e2-c9a7-4d2f-b8a4-52b1124bee72",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "http://nexus_api:8000/api/v1/metrics",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "c8b1f679-2715-4b9b-9a8e-233caec4c0a9",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "512a5399-e210-4158-ab01-0a9ebc8dff37",
+              "leftValue": "={{ $json.latest.faithfulness }}",
+              "rightValue": 0.75,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        0
+      ],
+      "id": "bcf85438-1af9-420f-bd32-d4e11dce2013",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ALERT_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"alert\": \"NEXUS-AI quality degradation detected\",\n  \"faithfulness\": \"{{ $json.latest.faithfulness }}\",\n  \"threshold\": 0.75,\n  \"timestamp\": \"{{ $json.latest.timestamp }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        672,
+        -96
+      ],
+      "id": "05e2a56f-8921-4fee-9291-467b042ab6be",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        672,
+        96
+      ],
+      "id": "cdeaf6c6-b951-4423-8e30-e11870142df3",
+      "name": "No Operation, do nothing"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "326e9168-7bce-4e46-bd33-b2cadf775549",
+  "meta": {
+    "instanceId": "c8fe0e8286a51dd1c71f5417b51284ffe6baebd68d442b1b02c457a9973d4a66"
+  },
+  "nodeGroups": [],
+  "id": "3ZAKwY8aENE5kqCs",
+  "tags": []
+}

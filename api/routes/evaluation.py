@@ -39,7 +39,7 @@ async def evaluate_endpoint():
     try:
         # Step 2: Execution
         logger.info("Initiating offline batch RAGAS evaluation pipeline...")
-        evaluation_results = run_ragas_evaluation()
+        evaluation_results = await run_ragas_evaluation()
         logger.info("RAGAS metrics calculation complete and logged to historical store.")
 
         # Step 3: Response Assembly

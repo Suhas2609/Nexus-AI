@@ -1,0 +1,145 @@
+{
+  "name": "daily_digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "da4731e5-1a3e-4c09-a2b6-f6a922e34e8b",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://nexus_api:8000/api/v1/chat",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"query\": \"Generate an executive briefing summarizing all recently ingested documents, key findings, and action items.\",\n  \"session_id\": \"daily_digest\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "04add09c-6915-4803-874d-e223835ecc1a",
+      "name": "HTTP Request",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst sources = item.sources || [];\nconst uniqueSources = [...new Set(sources.map(s => `${s.source} (p. ${s.page})`))];\n\nconst formattedText = `📢 **NEXUS Daily Executive Digest**\\n\\n${item.answer}\\n\\n**Sources Consulted:**\\n${uniqueSources.map(s => `• ${s}`).join('\\n')}`;\n\nreturn [{ json: { briefing: formattedText } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "fbafe166-e319-47d2-996d-7e2a7df2d4e7",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": {{ JSON.stringify($json.briefing) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        672,
+        0
+      ],
+      "id": "ed594451-e177-4dbf-a6cf-7011da5371d5",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        896,
+        0
+      ],
+      "id": "ffdbb249-7ce1-4a29-9a1b-f0718f9a7864",
+      "name": "No Operation, do nothing"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "3579b0ff-2104-433c-8c99-3cbe17f26800",
+  "meta": {
+    "instanceId": "c8fe0e8286a51dd1c71f5417b51284ffe6baebd68d442b1b02c457a9973d4a66"
+  },
+  "nodeGroups": [],
+  "id": "d92yXNZPJFYguGOD",
+  "tags": []
+}

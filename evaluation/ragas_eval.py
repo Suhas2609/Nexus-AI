@@ -13,6 +13,13 @@ from langchain_google_genai import (
     GoogleGenerativeAIEmbeddings,
 )
 
+import sys
+import types
+
+_vx = types.ModuleType("langchain_community.chat_models.vertexai")
+_vx.ChatVertexAI = type("ChatVertexAI", (object,), {})
+sys.modules["langchain_community.chat_models.vertexai"] = _vx
+
 from ragas import evaluate
 
 from ragas.embeddings import (
@@ -110,7 +117,7 @@ def _save_cache(data: Dict[str, Any]) -> None:
     )
 
 
-def run_ragas_evaluation(
+def _run_ragas_evaluation_sync(
     use_cache: bool = True,
 ) -> Dict[str, Any]:
 
@@ -210,13 +217,11 @@ def run_ragas_evaluation(
                 f"{question[:70]}..."
             )
 
-            result = asyncio.run(
-                rag_chain.ainvoke(
-                    {
-                        "input": question,
-                        "chat_history": [],
-                    }
-                )
+            result = rag_chain.invoke(
+                {
+                    "input": question,
+                    "chat_history": [],
+                }
             )
 
             generated_answer: str = (
@@ -484,3 +489,14 @@ def run_ragas_evaluation(
     save_metrics(results_dict)
 
     return results_dict
+
+
+async def run_ragas_evaluation(
+    use_cache: bool = True,
+) -> Dict[str, Any]:
+    """
+    Asynchronous wrapper that dispatches the synchronous RAGAS evaluation pipeline
+    to a worker thread via asyncio.to_thread. This prevents nested event loop conflicts
+    when triggered from FastAPI (uvloop).
+    """
+    return await asyncio.to_thread(_run_ragas_evaluation_sync, use_cache=use_cache)
